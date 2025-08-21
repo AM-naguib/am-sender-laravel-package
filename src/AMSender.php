@@ -82,10 +82,17 @@ class AMSender
         // Validate input data
         AMSenderValidator::validateSendMessage($payload);
 
-        // Clean and prepare payload
+        // Clean and prepare payload - filter out empty receivers
+        $cleanReceivers = array_filter(
+            array_map('trim', $payload['receivers']), 
+            function($receiver) {
+                return !empty($receiver);
+            }
+        );
+
         $cleanPayload = [
             'message' => trim($payload['message']),
-            'receivers' => array_map('trim', $payload['receivers']),
+            'receivers' => array_values($cleanReceivers), // Re-index array after filtering
             'device_ids' => array_map('trim', $payload['device_ids']),
             'auth_key' => $this->authKey,
         ];

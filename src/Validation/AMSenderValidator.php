@@ -97,21 +97,26 @@ class AMSenderValidator
             throw new ValidationException('Receivers must be an array.');
         }
 
-        if (empty($data['receivers'])) {
-            throw new ValidationException('At least one receiver is required.');
+        // Filter out empty receivers
+        $filteredReceivers = array_filter($data['receivers'], function($receiver) {
+            return !empty(trim($receiver));
+        });
+
+        if (empty($filteredReceivers)) {
+            throw new ValidationException('At least one valid receiver is required.');
         }
 
-        if (count($data['receivers']) > 1000) {
+        if (count($filteredReceivers) > 1000) {
             throw new ValidationException('Cannot send to more than 1000 receivers at once.');
         }
 
-        foreach ($data['receivers'] as $index => $receiver) {
+        foreach ($filteredReceivers as $index => $receiver) {
             self::validatePhoneNumber($receiver, $index);
         }
 
-        // Check for duplicates
-        $uniqueReceivers = array_unique($data['receivers']);
-        if (count($uniqueReceivers) !== count($data['receivers'])) {
+        // Check for duplicates (after filtering)
+        $uniqueReceivers = array_unique($filteredReceivers);
+        if (count($uniqueReceivers) !== count($filteredReceivers)) {
             throw new ValidationException('Duplicate phone numbers found in receivers list.');
         }
     }
@@ -227,18 +232,18 @@ class AMSenderValidator
             throw new ValidationException("Phone number at index {$index} cannot be empty.");
         }
 
-        // Must start with + and country code
-        if (!preg_match('/^\+[1-9]\d{1,14}$/', $phoneNumber)) {
-            throw new ValidationException("Phone number at index {$index} must be in international format (e.g., +1234567890). Include country code with + prefix.");
+        // Basic validation - just check it's not empty and has reasonable length
+        if (strlen($phoneNumber) < 5) {
+            throw new ValidationException("Phone number at index {$index} is too short. Minimum 5 characters required.");
         }
 
-        // Check minimum and maximum length
-        if (strlen($phoneNumber) < 8) {
-            throw new ValidationException("Phone number at index {$index} is too short. Minimum 8 characters required.");
+        if (strlen($phoneNumber) > 20) {
+            throw new ValidationException("Phone number at index {$index} is too long. Maximum 20 characters allowed.");
         }
 
-        if (strlen($phoneNumber) > 16) {
-            throw new ValidationException("Phone number at index {$index} is too long. Maximum 16 characters allowed.");
+        // Allow only numbers, spaces, hyphens, parentheses, and plus sign
+        if (!preg_match('/^[0-9\s\-\(\)\+]+$/', $phoneNumber)) {
+            throw new ValidationException("Phone number at index {$index} contains invalid characters. Only numbers, spaces, hyphens, parentheses, and plus sign are allowed.");
         }
     }
 

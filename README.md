@@ -193,8 +193,10 @@ The package automatically validates all input data before sending requests to th
 - **Length**: 3-4096 characters
 
 #### Phone Number Validation:
-- **Format**: Must be in international format with country code (e.g., +1234567890)
-- **Length**: 8-16 characters
+- **Format**: Flexible format - accepts any phone number format
+- **Length**: 5-20 characters
+- **Characters**: Numbers, spaces, hyphens, parentheses, and plus sign allowed
+- **Auto-Cleaning**: Empty phone numbers are automatically filtered out
 - **No Duplicates**: Duplicate numbers are automatically detected
 
 #### Device IDs Validation:
@@ -221,14 +223,14 @@ try {
 }
 
 try {
-    // This will throw ValidationException - invalid phone number
+    // This will throw ValidationException - phone number too short
     AMSender::send([
         'message' => 'Hello!',
-        'receivers' => ['1234567890'], // Missing country code
+        'receivers' => ['123'], // Too short
         'device_ids' => ['device-1']
     ]);
 } catch (ValidationException $e) {
-    echo $e->getMessage(); // "Phone number at index 0 must be in international format..."
+    echo $e->getMessage(); // "Phone number at index 0 is too short. Minimum 5 characters required."
 }
 
 try {
@@ -337,14 +339,22 @@ try {
 ```
 
 ### Phone Number Formatting
-Always use international format with country codes:
+The package accepts flexible phone number formats and automatically filters out empty numbers:
 
 ```php
-// ✅ Correct
-$receivers = ['+1234567890', '+201234567890'];
+// ✅ All these formats are accepted
+$receivers = [
+    '+1234567890',      // International format
+    '01234567890',      // Local format
+    '123-456-7890',     // With hyphens
+    '(123) 456-7890',   // With parentheses
+    '123 456 7890',     // With spaces
+    '',                 // Empty - will be filtered out automatically
+    '   ',              // Whitespace only - will be filtered out
+];
 
-// ❌ Incorrect  
-$receivers = ['01234567890', '1234567890'];
+// Result: Empty numbers are automatically removed
+// Final receivers: ['+1234567890', '01234567890', '123-456-7890', '(123) 456-7890', '123 456 7890']
 ```
 
 ### Batch Processing
