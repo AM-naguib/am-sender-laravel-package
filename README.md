@@ -259,6 +259,74 @@ try {
 }
 ```
 
+## Image Handling
+
+The package provides comprehensive image URL validation and helpful error messages for image-related issues.
+
+### Image URL Requirements:
+- Must be publicly accessible (no localhost or private URLs)
+- Must use HTTP or HTTPS protocol
+- Should point to a valid image file (jpg, jpeg, png, gif, webp, bmp, svg)
+- Maximum URL length: 2048 characters
+
+### Common Image Issues and Solutions:
+
+```php
+use AMSender\Facades\AMSender;
+use AMSender\Exceptions\InvalidImageException;
+use AMSender\Helpers\ImageHelper;
+
+try {
+    $result = AMSender::send([
+        'message' => 'Check this image!',
+        'receivers' => ['+1234567890'],
+        'device_ids' => ['device-1'],
+        'image' => 'https://example.com/image.jpg'
+    ]);
+} catch (InvalidImageException $e) {
+    echo "Image error: " . $e->getMessage();
+    
+    // Get suggestions for fixing the URL
+    $suggestions = ImageHelper::getImageUrlSuggestions('https://example.com/image.jpg');
+    foreach ($suggestions as $suggestion) {
+        echo "- " . $suggestion . "\n";
+    }
+}
+
+// Test an image URL before sending
+$imageUrl = 'https://example.com/image.jpg';
+$testResult = ImageHelper::testImageUrl($imageUrl);
+
+if (!$testResult['is_accessible']) {
+    echo "Image URL is not accessible\n";
+    foreach ($testResult['errors'] as $error) {
+        echo "Error: " . $error . "\n";
+    }
+}
+
+if ($testResult['warnings']) {
+    foreach ($testResult['warnings'] as $warning) {
+        echo "Warning: " . $warning . "\n";
+    }
+}
+```
+
+### Image Error Messages:
+
+```php
+// Common error scenarios:
+
+// 1. URL not accessible
+"Image URL is not accessible. Please check: 1) URL is publicly accessible, 2) URL points to a valid image file, 3) Image server allows external access."
+
+// 2. Invalid file type
+"The provided URL does not point to a valid image file. Please ensure the URL ends with a valid image extension (jpg, jpeg, png, gif, webp, bmp)."
+
+// 3. URL format issues
+"Image must be a valid URL format."
+"Image URL must use HTTP or HTTPS protocol."
+```
+
 ## Exception Handling
 
 The package provides specific exception classes for different error scenarios:
@@ -267,7 +335,7 @@ The package provides specific exception classes for different error scenarios:
 - `UserNotFoundException` - User not found
 - `SubscriptionExpiredException` - Subscription has expired
 - `DeviceNotFoundException` - Device not found or inactive
-- `InvalidImageException` - Invalid image URL
+- `InvalidImageException` - Invalid or inaccessible image URL
 - `AuthKeyNotValidException` - Invalid authentication key
 - `LimitExceededException` - API limits exceeded
 - `ValidationException` - Input validation errors (422 status code)

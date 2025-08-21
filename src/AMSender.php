@@ -10,6 +10,7 @@ use AMSender\Exceptions\LimitExceededException;
 use AMSender\Exceptions\SubscriptionExpiredException;
 use AMSender\Exceptions\UserNotFoundException;
 use AMSender\Exceptions\ValidationException;
+use AMSender\Helpers\ImageHelper;
 use AMSender\Validation\AMSenderValidator;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\Client\Response;
@@ -166,12 +167,56 @@ class AMSender
             throw new AuthKeyNotValidException($errorMessage);
         }
 
-        if (str_contains($errorMessage, 'image') || str_contains($errorMessage, 'url')) {
-            throw new InvalidImageException($errorMessage);
+        // Handle image-related errors with more specific messages
+        if (str_contains($errorMessage, 'failed to fetch image url') || 
+            str_contains($errorMessage, 'image url') || 
+            str_contains($errorMessage, 'url does not point to an image')) {
+            throw new InvalidImageException($this->getImageErrorMessage($errorMessage));
         }
 
         if (str_contains($errorMessage, 'validation')) {
             throw new ValidationException($errorMessage);
         }
+    }
+
+    /**
+     * Get user-friendly image error message.
+     *
+     * @param string $originalMessage
+     * @return string
+     */
+    protected function getImageErrorMessage(string $originalMessage): string
+    {
+        if (str_contains($originalMessage, 'failed to fetch image url')) {
+            return 'Image URL is not accessible. Please check: 1) URL is publicly accessible, 2) URL points to a valid image file, 3) Image server allows external access. Original error: ' . $originalMessage;
+        }
+
+        if (str_contains($originalMessage, 'url does not point to an image')) {
+            return 'The provided URL does not point to a valid image file. Please ensure the URL ends with a valid image extension (jpg, jpeg, png, gif, webp, bmp). Original error: ' . $originalMessage;
+        }
+
+        return 'Image error: ' . $originalMessage . '. Please verify the image URL is publicly accessible and points to a valid image file.';
+    }
+
+    /**
+     * Test an image URL for accessibility and validity.
+     *
+     * @param string $imageUrl
+     * @return array
+     */
+    public function testImageUrl(string $imageUrl): array
+    {
+        return ImageHelper::testImageUrl($imageUrl);
+    }
+
+    /**
+     * Get suggestions for fixing image URL issues.
+     *
+     * @param string $imageUrl
+     * @return array
+     */
+    public function getImageUrlSuggestions(string $imageUrl): array
+    {
+        return ImageHelper::getImageUrlSuggestions($imageUrl);
     }
 }

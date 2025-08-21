@@ -190,25 +190,7 @@ class AMSenderValidator
 
         // Validate image URL
         if (isset($data['image']) && !empty($data['image'])) {
-            if (!is_string($data['image'])) {
-                throw new ValidationException('Image must be a string URL.');
-            }
-
-            if (!filter_var($data['image'], FILTER_VALIDATE_URL)) {
-                throw new ValidationException('Image must be a valid URL.');
-            }
-
-            // Check if URL points to an image
-            $imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'];
-            $extension = strtolower(pathinfo(parse_url($data['image'], PHP_URL_PATH), PATHINFO_EXTENSION));
-            
-            if (!in_array($extension, $imageExtensions)) {
-                throw new ValidationException('Image URL must point to a valid image file (jpg, jpeg, png, gif, webp, bmp).');
-            }
-
-            if (strlen($data['image']) > 2048) {
-                throw new ValidationException('Image URL cannot exceed 2048 characters.');
-            }
+            self::validateImageUrl($data['image']);
         }
     }
 
@@ -244,6 +226,83 @@ class AMSenderValidator
         // Allow only numbers, spaces, hyphens, parentheses, and plus sign
         if (!preg_match('/^[0-9\s\-\(\)\+]+$/', $phoneNumber)) {
             throw new ValidationException("Phone number at index {$index} contains invalid characters. Only numbers, spaces, hyphens, parentheses, and plus sign are allowed.");
+        }
+    }
+
+    /**
+     * Validate image URL with comprehensive checks.
+     *
+     * @param string $imageUrl
+     * @return void
+     * @throws ValidationException
+     */
+    public static function validateImageUrl(string $imageUrl): void
+    {
+        if (!is_string($imageUrl)) {
+            throw new ValidationException('Image must be a string URL.');
+        }
+
+        $imageUrl = trim($imageUrl);
+
+        if (empty($imageUrl)) {
+            return; // Allow empty image URLs
+        }
+
+        if (strlen($imageUrl) > 2048) {
+            throw new ValidationException('Image URL cannot exceed 2048 characters.');
+        }
+
+        if (!filter_var($imageUrl, FILTER_VALIDATE_URL)) {
+            throw new ValidationException('Image must be a valid URL format.');
+        }
+
+        // Check URL scheme
+        $parsedUrl = parse_url($imageUrl);
+        if (!isset($parsedUrl['scheme']) || !in_array(strtolower($parsedUrl['scheme']), ['http', 'https'])) {
+            throw new ValidationException('Image URL must use HTTP or HTTPS protocol.');
+        }
+
+        // Check if URL points to an image file
+        $imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'];
+        $path = $parsedUrl['path'] ?? '';
+        $extension = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+        
+        if (!empty($extension) && !in_array($extension, $imageExtensions)) {
+            throw new ValidationException('Image URL must point to a valid image file (jpg, jpeg, png, gif, webp, bmp, svg).');
+        }
+
+        // Basic URL accessibility check (optional warning)
+        if (!self::isUrlAccessible($imageUrl)) {
+            throw new ValidationException('Warning: Image URL appears to be inaccessible. Please verify the URL is publicly accessible.');
+        }
+    }
+
+    /**
+     * Check if URL is accessible (basic check).
+     *
+     * @param string $url
+     * @return bool
+     */
+    private static function isUrlAccessible(string $url): bool
+    {
+        // Use get_headers for a quick check
+        try {
+            $headers = @get_headers($url, 1);
+            if ($headers === false) {
+                return false;
+            }
+
+            // Check if we got a successful response
+            $httpCode = 0;
+            if (isset($headers[0])) {
+                preg_match('/HTTP\/\d\.\d\s+(\d+)/', $headers[0], $matches);
+                $httpCode = isset($matches[1]) ? (int)$matches[1] : 0;
+            }
+
+            return $httpCode >= 200 && $httpCode < 400;
+        } catch (\Exception $e) {
+            // If we can't check, assume it's accessible to avoid blocking valid URLs
+            return true;
         }
     }
 
