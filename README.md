@@ -17,7 +17,7 @@ A Laravel package for integrating with the AM-Sender API (https://am-sender.com/
 Install the package via Composer:
 
 ```bash
-composer require am-sender/am-sender
+composer require am-naguib/am-sender
 ```
 
 The package will be automatically discovered by Laravel.

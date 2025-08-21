@@ -1,8 +1,8 @@
 {
-    "name": "am-sender/am-sender",
+    "name": "am-naguib/am-sender",
     "description": "Laravel package for AM-Sender API integration",
     "keywords": ["laravel", "whatsapp", "am-sender", "messaging", "api", "sms"],
-    "homepage": "https://github.com/YOUR_USERNAME/am-sender-laravel",
+    "homepage": "https://github.com/AM-naguib/am-sender-laravel-package",
     "type": "library",
     "license": "MIT",
     "authors": [
