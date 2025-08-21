@@ -1,0 +1,78 @@
+{
+  "endpoints": {
+    "devices": {
+      "list": {
+        "method": "GET",
+        "url": "/devices",
+        "params": ["auth_key"],
+        "success": {
+          "success": true,
+          "devices": []
+        },
+        "errors": ["User not found", "ValidationException"]
+      },
+      "create": {
+        "method": "POST",
+        "url": "/devices/create",
+        "body": ["name", "auth_key"],
+        "success": {
+          "success": true,
+          "data": {
+            "device_id": "string",
+            "name": "string",
+            "status": "string",
+            "qr": "string"
+          }
+        },
+        "errors": [
+          "User not found",
+          "Subscription Expired",
+          "Failed to create session"
+        ]
+      }
+    },
+    "sender": {
+      "send": {
+        "method": "POST",
+        "url": "/sender",
+        "body": [
+          "message",
+          "receivers[]",
+          "device_ids[]",
+          "delay_time",
+          "image",
+          "auth_key"
+        ],
+        "success": {
+          "success": true,
+          "message": "Message Sent Successfully"
+        },
+        "errors": [
+          "One or more devices are not found, or not active.",
+          "The Number of Receivers More Than Subscription Limit",
+          "Your limit has been exceeded",
+          "Your Subscription Expired",
+          "Auth key not valid",
+          "Invalid URL",
+          "Failed to fetch image URL.",
+          "URL does not point to an image."
+        ]
+      }
+    }
+  },
+  "validations": {
+    "auth_key": "required|string",
+    "message": "required|string|min:3",
+    "receivers": "required|array",
+    "device_ids": "required|array",
+    "image": "nullable|url"
+  },
+  "suggested_exceptions": [
+    "UserNotFoundException",
+    "SubscriptionExpiredException",
+    "DeviceNotFoundException",
+    "InvalidImageException",
+    "AuthKeyNotValidException",
+    "LimitExceededException"
+  ]
+}

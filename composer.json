@@ -1,0 +1,45 @@
+{
+    "name": "am-sender/am-sender",
+    "description": "Laravel package for AM-Sender API integration",
+    "keywords": ["laravel", "whatsapp", "am-sender", "messaging", "api", "sms"],
+    "homepage": "https://github.com/YOUR_USERNAME/am-sender-laravel",
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "AM-Sender Package",
+            "email": "info@am-sender.com"
+        }
+    ],
+    "require": {
+        "php": "^8.1",
+        "laravel/framework": "^10.0|^11.0",
+        "guzzlehttp/guzzle": "^7.0"
+    },
+    "require-dev": {
+        "orchestra/testbench": "^8.0|^9.0",
+        "phpunit/phpunit": "^10.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "AMSender\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "AMSender\\Tests\\": "tests/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "AMSender\\AMSenderServiceProvider"
+            ],
+            "aliases": {
+                "AMSender": "AMSender\\Facades\\AMSender"
+            }
+        }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}
