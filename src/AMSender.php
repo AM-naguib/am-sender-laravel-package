@@ -10,6 +10,7 @@ use AMSender\Exceptions\LimitExceededException;
 use AMSender\Exceptions\SubscriptionExpiredException;
 use AMSender\Exceptions\UserNotFoundException;
 use AMSender\Exceptions\ValidationException;
+use AMSender\Validation\AMSenderValidator;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
@@ -23,9 +24,8 @@ class AMSender
     {
         $this->authKey = config('am-sender.auth_key');
         
-        if (empty($this->authKey)) {
-            throw new AMSenderException('AM-Sender auth key is not configured. Please set AM_SENDER_AUTH_KEY in your environment.');
-        }
+        // Validate auth key
+        AMSenderValidator::validateAuthKey($this->authKey);
 
         $this->client = Http::baseUrl(config('am-sender.base_url'))
             ->timeout(config('am-sender.timeout', 30))
@@ -59,8 +59,11 @@ class AMSender
      */
     public function createDevice(string $name): array
     {
+        // Validate input data
+        AMSenderValidator::validateCreateDevice(['name' => $name]);
+
         $response = $this->client->post('/devices/create', [
-            'name' => $name,
+            'name' => trim($name),
             'auth_key' => $this->authKey,
         ]);
 
@@ -76,12 +79,27 @@ class AMSender
      */
     public function send(array $payload): array
     {
-        // Add auth_key to payload if not present
-        if (!isset($payload['auth_key'])) {
-            $payload['auth_key'] = $this->authKey;
+        // Validate input data
+        AMSenderValidator::validateSendMessage($payload);
+
+        // Clean and prepare payload
+        $cleanPayload = [
+            'message' => trim($payload['message']),
+            'receivers' => array_map('trim', $payload['receivers']),
+            'device_ids' => array_map('trim', $payload['device_ids']),
+            'auth_key' => $this->authKey,
+        ];
+
+        // Add optional fields if present
+        if (isset($payload['delay_time'])) {
+            $cleanPayload['delay_time'] = (int) $payload['delay_time'];
         }
 
-        $response = $this->client->post('/sender', $payload);
+        if (isset($payload['image']) && !empty($payload['image'])) {
+            $cleanPayload['image'] = trim($payload['image']);
+        }
+
+        $response = $this->client->post('/sender', $cleanPayload);
 
         return $this->handleResponse($response);
     }

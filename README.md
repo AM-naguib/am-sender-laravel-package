@@ -177,6 +177,86 @@ $result = AMSender::send([
 }
 ```
 
+## Input Validation
+
+The package automatically validates all input data before sending requests to the API. This helps catch errors early and provides clear feedback.
+
+### Validation Rules
+
+#### Device Name Validation:
+- **Required**: Cannot be empty
+- **Length**: 3-50 characters
+- **Characters**: Letters, numbers, spaces, hyphens, and underscores only
+
+#### Message Validation:
+- **Required**: Cannot be empty  
+- **Length**: 3-4096 characters
+
+#### Phone Number Validation:
+- **Format**: Must be in international format with country code (e.g., +1234567890)
+- **Length**: 8-16 characters
+- **No Duplicates**: Duplicate numbers are automatically detected
+
+#### Device IDs Validation:
+- **Required**: At least one device ID
+- **Limit**: Maximum 10 devices per request
+- **Length**: 3-100 characters per device ID
+- **No Duplicates**: Duplicate device IDs are detected
+
+#### Optional Fields:
+- **delay_time**: 0-3600 seconds (1 hour max)
+- **image**: Valid URL pointing to image file (jpg, jpeg, png, gif, webp, bmp)
+
+### Validation Examples
+
+```php
+use AMSender\Facades\AMSender;
+use AMSender\Exceptions\ValidationException;
+
+try {
+    // This will throw ValidationException - device name too short
+    AMSender::createDevice('Hi');
+} catch (ValidationException $e) {
+    echo $e->getMessage(); // "Device name must be at least 3 characters long."
+}
+
+try {
+    // This will throw ValidationException - invalid phone number
+    AMSender::send([
+        'message' => 'Hello!',
+        'receivers' => ['1234567890'], // Missing country code
+        'device_ids' => ['device-1']
+    ]);
+} catch (ValidationException $e) {
+    echo $e->getMessage(); // "Phone number at index 0 must be in international format..."
+}
+
+try {
+    // This will throw ValidationException - message too short
+    AMSender::send([
+        'message' => 'Hi', // Too short
+        'receivers' => ['+1234567890'],
+        'device_ids' => ['device-1']
+    ]);
+} catch (ValidationException $e) {
+    echo $e->getMessage(); // "Message must be at least 3 characters long."
+}
+
+// Valid example
+try {
+    $result = AMSender::send([
+        'message' => 'Hello from Laravel!',
+        'receivers' => ['+1234567890', '+0987654321'],
+        'device_ids' => ['device-1'],
+        'delay_time' => 5,
+        'image' => 'https://example.com/image.jpg'
+    ]);
+    echo "Message sent successfully!";
+} catch (ValidationException $e) {
+    echo "Validation error: " . $e->getMessage();
+}
+```
+
 ## Exception Handling
 
 The package provides specific exception classes for different error scenarios:
@@ -188,7 +268,7 @@ The package provides specific exception classes for different error scenarios:
 - `InvalidImageException` - Invalid image URL
 - `AuthKeyNotValidException` - Invalid authentication key
 - `LimitExceededException` - API limits exceeded
-- `ValidationException` - Validation errors
+- `ValidationException` - Input validation errors (422 status code)
 
 ```php
 use AMSender\Exceptions\SubscriptionExpiredException;
@@ -229,6 +309,64 @@ return [
         'sleep' => env('AM_SENDER_RETRY_SLEEP', 1000),
     ],
 ];
+```
+
+## Best Practices
+
+### Input Sanitization
+The package automatically trims whitespace from all string inputs and validates data formats. However, you should still sanitize your inputs before passing them to the package.
+
+### Error Handling
+Always wrap your API calls in try-catch blocks to handle both validation errors and API errors gracefully:
+
+```php
+use AMSender\Facades\AMSender;
+use AMSender\Exceptions\ValidationException;
+use AMSender\Exceptions\AMSenderException;
+
+try {
+    $result = AMSender::send($payload);
+    // Handle success
+} catch (ValidationException $e) {
+    // Handle validation errors (400-level errors)
+    Log::warning('Validation error: ' . $e->getMessage());
+} catch (AMSenderException $e) {
+    // Handle API errors (500-level errors)
+    Log::error('API error: ' . $e->getMessage());
+}
+```
+
+### Phone Number Formatting
+Always use international format with country codes:
+
+```php
+// ✅ Correct
+$receivers = ['+1234567890', '+201234567890'];
+
+// ❌ Incorrect  
+$receivers = ['01234567890', '1234567890'];
+```
+
+### Batch Processing
+For large recipient lists, consider breaking them into smaller batches:
+
+```php
+$allReceivers = ['+1111111111', '+2222222222', /* ... many more */];
+$chunks = array_chunk($allReceivers, 100); // Process 100 at a time
+
+foreach ($chunks as $chunk) {
+    try {
+        AMSender::send([
+            'message' => 'Bulk message',
+            'receivers' => $chunk,
+            'device_ids' => ['device-1'],
+            'delay_time' => 2 // Add delay between batches
+        ]);
+        sleep(5); // Wait between batches to avoid rate limits
+    } catch (Exception $e) {
+        Log::error("Batch failed: " . $e->getMessage());
+    }
+}
 ```
 
 ## Requirements
